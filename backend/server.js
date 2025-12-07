@@ -1,56 +1,40 @@
 const express = require("express");
 const app = express();
-
 const server = require("http").createServer(app);
-const io = require("socket.io")(server, {
-  cors: { origin: "*" }
-});
+const io = require("socket.io")(server, { cors: { origin: "*" } });
+const { userJoin, userLeave, getUsers } = require("./utils/users");
 
-// import user functions
-const { userJoin, userLeave, getUsers } = require("./utils//users");
-
-let imgURLGlobal = null;
+let elementsGlobal = []; // store whiteboard elements
 
 io.on("connection", (socket) => {
   console.log("User Connected:", socket.id);
 
-  // User joins room
-  socket.on("userJoined", ({ roomId, username, host, presenter }) => {
+  socket.on("userJoined", ({ name, roomId, host, presenter, userId }) => {
     socket.join(roomId);
 
     // add to memory
-    userJoin(socket.id, username, roomId, host, presenter);
+    userJoin(socket.id, name, roomId, host, presenter);
 
-    // send confirmation
+    // confirmation
     socket.emit("userIsJoined", { success: true });
 
-    // send updated users list to room
-    const roomUsers = getUsers(roomId);
-    io.to(roomId).emit("roomUsers", roomUsers);
+    // send updated room users
+    io.to(roomId).emit("roomUsers", getUsers(roomId));
 
     // send existing board to new user
-    socket.broadcast.to(roomId).emit("whiteBoardDataResponse", {
-      imgURL: imgURLGlobal
-    });
+    socket.emit("whiteBoardDataResponse", { elements: elementsGlobal });
   });
 
-  // receive whiteboard data
-  socket.on("whiteboardData", (data) => {
-    imgURLGlobal = data;
-    // broadcast to all in room except sender
-    socket.broadcast.emit("whiteBoardDataResponse", { imgURL: data });
+  socket.on("whiteBoardData", ({ elements }) => {
+    elementsGlobal = elements;
+    socket.broadcast.emit("whiteBoardDataResponse", { elements: elementsGlobal });
   });
 
-  // user disconnects
   socket.on("disconnect", () => {
     const user = userLeave(socket.id);
-    if (user) {
-      const roomUsers = getUsers(user.room);
-      io.to(user.room).emit("roomUsers", roomUsers);
-    }
+    if (user) io.to(user.room).emit("roomUsers", getUsers(user.room));
     console.log("User Disconnected:", socket.id);
   });
-
 });
 
 const port = 5000;

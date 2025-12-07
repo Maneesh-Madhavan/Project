@@ -1,150 +1,145 @@
-import { useEffect, useState } from "react";
-import rough from "roughjs";
+import { useEffect, useRef } from "react";
 
 const WhiteBoard = ({ canvasRef, ctxRef, elements, setElements, tool, color, user, socket }) => {
-  const [img, setImg] = useState(null);
-
-  // Receive image updates
-  useEffect(() => {
-    socket.on("whiteBoardDataResponse", (data) => {
-      setImg(data.imgURL);
-    });
-  }, []);
-
-  // Viewer mode (non-presenter)
-  if (!user?.presenter) {
-    if (!img) {
-      return <div className="wb-canvas">Waiting for presenter...</div>;
-    }
-    return <img src={img} className="wb-canvas" alt="Real Time Board" />;
-  }
-
-  // Presenter mode
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [startPoint, setStartPoint] = useState(null);
+  const isDrawing = useRef(false);
+  const currentStroke = useRef([]);
+useEffect(() => {
+  const canvas = canvasRef.current;
+  if (!canvas) return;
 
   const resizeCanvas = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const parent = canvas.parentElement;
+    if (!parent) return;
 
-    const rect = canvas.parentElement.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
+    canvas.width = parent.clientWidth;
+    canvas.height = parent.clientHeight;
 
     const ctx = canvas.getContext("2d");
-    ctx.lineWidth = 2;
-    ctx.lineJoin = "round";
     ctx.lineCap = "round";
-
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 2;
     ctxRef.current = ctx;
+
+    // Redraw existing elements after resize
+    if (elements?.length) {
+      elements.forEach(el => {
+        redraw(el);
+      });
+    }
   };
 
-  useEffect(() => {
-    resizeCanvas();
-    window.addEventListener("resize", resizeCanvas);
-    return () => window.removeEventListener("resize", resizeCanvas);
-  }, []);
+  resizeCanvas();
 
-  // Draw changes
+  window.addEventListener("resize", resizeCanvas);
+  return () => window.removeEventListener("resize", resizeCanvas);
+}, [canvasRef, elements]);
+
+
   useEffect(() => {
-    const canvas = canvasRef.current;
+    socket.on("whiteBoardDataResponse", (data) => {
+      if (data?.elements) setElements(data.elements);
+    });
+    return () => socket.off("whiteBoardDataResponse");
+  }, [socket, setElements]);
+
+  const redraw = (tempElement = null) => {
     const ctx = ctxRef.current;
-    if (!canvas || !ctx) return;
-
-    const rc = rough.canvas(canvas);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!ctx) return;
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
     elements.forEach((el) => {
-      const { type, path, stroke } = el;
-
-      if (type === "pencil") rc.linearPath(path, { stroke, strokeWidth: 2 });
-
-      if (type === "line") {
-        const [p1, p2] = path;
-        rc.line(p1[0], p1[1], p2[0], p2[1], { stroke, strokeWidth: 2 });
-      }
-
-      if (type === "rect") {
-        const [p1, p2] = path;
-        rc.rectangle(p1[0], p1[1], p2[0] - p1[0], p2[1] - p1[1], {
-          stroke,
-          strokeWidth: 2
-        });
+      ctx.strokeStyle = el.color || "#000";
+      if (el.type === "pencil" && el.points?.length > 1) {
+        ctx.beginPath();
+        ctx.moveTo(el.points[0].x, el.points[0].y);
+        for (let i = 1; i < el.points.length; i++) ctx.lineTo(el.points[i].x, el.points[i].y);
+        ctx.stroke();
+      } else if (el.type === "line" && el.path?.length === 2) {
+        const [p1, p2] = el.path;
+        ctx.beginPath();
+        ctx.moveTo(p1[0], p1[1]);
+        ctx.lineTo(p2[0], p2[1]);
+        ctx.stroke();
+      } else if (el.type === "rect" && el.path?.length === 2) {
+        const [p1, p2] = el.path;
+        ctx.strokeRect(p1[0], p1[1], p2[0] - p1[0], p2[1] - p1[1]);
       }
     });
 
-    // Send updated image to server
-    const canvasImage = canvasRef.current.toDataURL("image/png");
-    socket.emit("whiteboardData", canvasImage);
-  }, [elements]);
-
-  // Helpers
-  const getCoords = (e) => {
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    if (e.touches) {
-      const t = e.touches[0];
-      return [t.clientX - rect.left, t.clientY - rect.top];
+    if (tempElement) {
+      ctx.strokeStyle = tempElement.color;
+      if (tempElement.type === "pencil" && tempElement.points?.length > 1) {
+        ctx.beginPath();
+        ctx.moveTo(tempElement.points[0].x, tempElement.points[0].y);
+        for (let i = 1; i < tempElement.points.length; i++) ctx.lineTo(tempElement.points[i].x, tempElement.points[i].y);
+        ctx.stroke();
+      } else if (tempElement.type === "line" && tempElement.path?.length === 2) {
+        const [p1, p2] = tempElement.path;
+        ctx.beginPath();
+        ctx.moveTo(p1[0], p1[1]);
+        ctx.lineTo(p2[0], p2[1]);
+        ctx.stroke();
+      } else if (tempElement.type === "rect" && tempElement.path?.length === 2) {
+        const [p1, p2] = tempElement.path;
+        ctx.strokeRect(p1[0], p1[1], p2[0] - p1[0], p2[1] - p1[1]);
+      }
     }
-    return [e.nativeEvent.offsetX, e.nativeEvent.offsetY];
   };
 
-  const handleStart = (e) => {
-    const [x, y] = getCoords(e);
-    setIsDrawing(true);
-    setStartPoint([x, y]);
+  useEffect(() => { redraw(); }, [elements]);
 
-    if (tool === "pencil")
-      setElements((prev) => [...prev, { type: "pencil", stroke: color, path: [[x, y]] }]);
+  const getCoords = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   };
 
-  const handleMove = (e) => {
-    if (!isDrawing) return;
-
-    const [x, y] = getCoords(e);
-
-    setElements((prev) => {
-      const els = [...prev];
-      const last = els[els.length - 1];
-      if (!last) return els;
-
-      if (tool === "pencil") last.path.push([x, y]);
-      if (tool === "line" || tool === "rect") last.path = [startPoint, [x, y]];
-
-      return els;
-    });
+  const startDrawing = (e) => {
+    if (!user?.presenter) return;
+    isDrawing.current = true;
+    const coords = getCoords(e);
+    if (tool === "pencil") currentStroke.current = [coords];
+    else currentStroke.current = [[coords.x, coords.y], [coords.x, coords.y]];
   };
 
-  const handleEnd = () => {
-    setIsDrawing(false);
-    setStartPoint(null);
+  const draw = (e) => {
+    if (!isDrawing.current || !user?.presenter) return;
+    const coords = getCoords(e);
+    if (tool === "pencil") {
+      currentStroke.current.push(coords);
+      redraw({ type: "pencil", color, points: currentStroke.current });
+    } else {
+      currentStroke.current[1] = [coords.x, coords.y];
+      redraw({ type: tool, color, path: currentStroke.current });
+    }
   };
 
-  const handleStartShape = (e) => {
-    const [x, y] = getCoords(e);
+  const stopDrawing = () => {
+    if (!isDrawing.current || !user?.presenter) return;
+    isDrawing.current = false;
+    if (!currentStroke.current.length) return;
 
-    if (tool === "line" || tool === "rect")
-      setElements((prev) => [...prev, { type: tool, stroke: color, path: [[x, y], [x, y]] }]);
+    let newElement;
+    if (tool === "pencil") newElement = { type: "pencil", color, points: currentStroke.current };
+    else newElement = { type: tool, color, path: [...currentStroke.current] };
+
+    if (newElement) {
+      setElements(prev => {
+        const updated = [...prev, newElement];
+        socket.emit("whiteBoardData", { elements: updated });
+        return updated;
+      });
+    }
+    currentStroke.current = [];
   };
 
   return (
     <canvas
       ref={canvasRef}
       className="wb-canvas"
-      onMouseDown={(e) => {
-        handleStart(e);
-        handleStartShape(e);
-      }}
-      onMouseMove={handleMove}
-      onMouseUp={handleEnd}
-      onMouseLeave={handleEnd}
-      onTouchStart={(e) => {
-        handleStart(e);
-        handleStartShape(e);
-      }}
-      onTouchMove={handleMove}
-      onTouchEnd={handleEnd}
-      touch-action="none"
+      onMouseDown={startDrawing}
+      onMouseMove={draw}
+      onMouseUp={stopDrawing}
+      onMouseLeave={stopDrawing}
     />
   );
 };
