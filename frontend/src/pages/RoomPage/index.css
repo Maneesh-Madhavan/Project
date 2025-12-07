@@ -1,0 +1,142 @@
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Generic SketchMate button */
+.sk-btn {
+  padding: 8px 15px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.25s ease;
+}
+
+/* Undo / Redo */
+.action-btn {
+  background: #58dca0;
+  color: white;
+  box-shadow: 0 3px 15px rgba(88, 220, 160, 0.4);
+}
+
+.action-btn:hover {
+  background: #41c88f;
+}
+
+/* Clear Canvas */
+.clear-btn {
+  background: #ff6b6b;
+  color: white;
+  box-shadow: 0 3px 15px rgba(255, 107, 107, 0.4);
+}
+
+.clear-btn:hover {
+  background: #ff4f4f;
+}
+
+/* Responsive toolbar for mobile */
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+  }
+
+  .tool-section,
+  .action-buttons,
+  .color-picker {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 15px;
+  }
+}
+/* PAGE WRAPPER */
+.room-wrapper {
+  min-height: 100vh;
+  padding: 20px;
+  background: linear-gradient(135deg, #ffffff, #e8fff3, #d7ffe9);
+  animation: bgMove 10s ease infinite;
+  background-size: 200% 200%;
+}
+
+@keyframes bgMove {
+  0% { background-position: 0 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+/* HEADER */
+.room-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.logo {
+  font-weight: 800;
+  margin: 0;
+}
+
+.users-online {
+  font-weight: 600;
+  color: #333;
+}
+
+/* TOOLBAR */
+.toolbar {
+  margin-top: 25px;
+  padding: 12px 20px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 6px 25px rgba(0,0,0,0.12);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Tool buttons */
+.tool-section {
+  display: flex;
+  gap: 25px;
+}
+
+.tool-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tool-option input {
+  accent-color: #58dca0;
+}
+
+/* Color Picker */
+.color-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+/* CANVAS WRAPPER */
+.canvas-container {
+  margin-top: 30px;
+  width: 100%;
+  height: 75vh;
+  background: #ffffff;
+  overflow: auto;
+  border-radius: 18px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
