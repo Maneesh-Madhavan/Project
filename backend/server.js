@@ -5,22 +5,20 @@ const { Server } = require("socket.io");
 const app = express();
 const server = http.createServer(app);
 
+const PORT = process.env.PORT || 5000;
+
 const io = new Server(server, {
   cors: {
     origin: "*",
-    methods: ["GET", "POST"]
-  }
+    methods: ["GET", "POST"],
+  },
 });
 
-const roomUsers = {};   
+const roomUsers = {};  
 const roomBoards = {};  
-const roomChats = {};  
-
-
+const roomChats = {};   
 
 io.on("connection", (socket) => {
-  console.log("Connected:", socket.id);
-
   socket.on("userJoined", (user) => {
     const { roomId } = user;
     if (!roomId) return;
@@ -29,20 +27,14 @@ io.on("connection", (socket) => {
 
     if (!roomUsers[roomId]) roomUsers[roomId] = [];
 
-    roomUsers[roomId] = roomUsers[roomId].filter(
-      (u) => u.socketId !== socket.id
-    );
+    roomUsers[roomId] = roomUsers[roomId].filter(u => u.socketId !== socket.id);
 
     roomUsers[roomId].push({ ...user, socketId: socket.id });
 
     socket.emit("whiteBoardData", roomBoards[roomId] || []);
-
     socket.emit("roomChatResponse", roomChats[roomId] || []);
 
-   
     io.to(roomId).emit("roomUsers", roomUsers[roomId]);
-
-    console.log(`User joined room ${roomId} | Users: ${roomUsers[roomId].length}`);
   });
 
   socket.on("whiteBoardData", ({ roomId, elements }) => {
@@ -64,22 +56,15 @@ io.on("connection", (socket) => {
     for (const roomId in roomUsers) {
       const before = roomUsers[roomId].length;
 
-      roomUsers[roomId] = roomUsers[roomId].filter(
-        (u) => u.socketId !== socket.id
-      );
+      roomUsers[roomId] = roomUsers[roomId].filter(u => u.socketId !== socket.id);
 
       if (roomUsers[roomId].length !== before) {
         io.to(roomId).emit("roomUsers", roomUsers[roomId]);
-        console.log(
-          `User left room ${roomId} | Users: ${roomUsers[roomId].length}`
-        );
       }
     }
-
-    console.log("Disconnected:", socket.id);
   });
 });
 
-server.listen(5000, () => {
-  console.log("Server running on port 5000");
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
