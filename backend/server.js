@@ -15,7 +15,7 @@ const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] },
 });
 
-// Your roomUsers, roomBoards, roomChats, and socket logic here
+// Store users, boards, and chats per room
 const roomUsers = {};
 const roomBoards = {};
 const roomChats = {};
@@ -26,6 +26,7 @@ io.on("connection", (socket) => {
     const roomId = user.roomId;
 
     socket.join(roomId);
+
     if (!roomUsers[roomId]) roomUsers[roomId] = [];
     roomUsers[roomId] = roomUsers[roomId].filter(u => u.socketId !== socket.id);
     roomUsers[roomId].push({ ...user, socketId: socket.id });
@@ -59,11 +60,12 @@ io.on("connection", (socket) => {
   });
 });
 
-// SPA fallback (so refreshing room pages won’t 404)
-app.get("*", (req, res) => {
+// SPA fallback for React/Vite routing
+app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
 });
 
+// Start server
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
