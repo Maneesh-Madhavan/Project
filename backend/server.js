@@ -4,7 +4,8 @@ const server = require("http").createServer(app);
 const io = require("socket.io")(server, { cors: { origin: "*" } });
 const { userJoin, userLeave, getUsers } = require("./utils/users");
 
-let elementsGlobal = []; // store whiteboard elements
+// Store whiteboard elements per room
+let roomElements = {};
 
 io.on("connection", (socket) => {
   console.log("User Connected:", socket.id);
@@ -12,22 +13,24 @@ io.on("connection", (socket) => {
   socket.on("userJoined", ({ name, roomId, host, presenter, userId }) => {
     socket.join(roomId);
 
-    // add to memory
+    // Add to memory
     userJoin(socket.id, name, roomId, host, presenter);
 
-    // confirmation
+    // Send confirmation
     socket.emit("userIsJoined", { success: true });
 
-    // send updated room users
+    // Send updated room users
     io.to(roomId).emit("roomUsers", getUsers(roomId));
 
-    // send existing board to new user
-    socket.emit("whiteBoardDataResponse", { elements: elementsGlobal });
+    // Send existing board for THIS room
+    if (!roomElements[roomId]) roomElements[roomId] = [];
+    socket.emit("whiteBoardDataResponse", { elements: roomElements[roomId] });
   });
 
-  socket.on("whiteBoardData", ({ elements }) => {
-    elementsGlobal = elements;
-    socket.broadcast.emit("whiteBoardDataResponse", { elements: elementsGlobal });
+  socket.on("whiteBoardData", ({ roomId, elements }) => {
+    // Update room-specific elements
+    roomElements[roomId] = elements;
+    socket.broadcast.to(roomId).emit("whiteBoardDataResponse", { elements: elements });
   });
 
   socket.on("disconnect", () => {

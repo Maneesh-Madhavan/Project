@@ -9,7 +9,7 @@ const WhiteBoard = ({
   color,
   user,
   socket,
-  roomId
+  roomId,
 }) => {
   const isDrawing = useRef(false);
   const currentStroke = useRef([]);
@@ -36,7 +36,7 @@ const WhiteBoard = ({
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
     return () => window.removeEventListener("resize", resizeCanvas);
-  }, []);
+  }, [elements]);
 
   /* ================= RECEIVE FINAL DATA ================= */
   useEffect(() => {
@@ -54,7 +54,6 @@ const WhiteBoard = ({
     return () => socket.off("whiteBoardTemp");
   }, [socket, elements]);
 
-  
   const redraw = (temp = null) => {
     const ctx = ctxRef.current;
     if (!ctx) return;
@@ -66,7 +65,7 @@ const WhiteBoard = ({
       if (el.type === "pencil") {
         ctx.beginPath();
         ctx.moveTo(el.points[0].x, el.points[0].y);
-        el.points.forEach(p => ctx.lineTo(p.x, p.y));
+        el.points.forEach((p) => ctx.lineTo(p.x, p.y));
         ctx.stroke();
       }
       if (el.type === "line") {
@@ -86,25 +85,26 @@ const WhiteBoard = ({
     if (temp) drawElement(temp);
   };
 
-  useEffect(() => redraw(), [elements]);
-
   const getCoords = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
+    if (e.touches) {
+      return {
+        x: e.touches[0].clientX - rect.left,
+        y: e.touches[0].clientY - rect.top,
+      };
+    }
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   };
 
-  
   const startDrawing = (e) => {
     isDrawing.current = true;
     const { x, y } = getCoords(e);
-
     if (tool === "pencil") currentStroke.current = [{ x, y }];
     else currentStroke.current = [[x, y], [x, y]];
   };
 
   const draw = (e) => {
     if (!isDrawing.current) return;
-
     const { x, y } = getCoords(e);
     let temp;
 
@@ -121,7 +121,7 @@ const WhiteBoard = ({
     socket.emit("whiteBoardTemp", {
       roomId,
       userId: user.userId,
-      element: temp
+      element: temp,
     });
   };
 
@@ -136,7 +136,7 @@ const WhiteBoard = ({
       finalElement = { type: tool, color, path: [...currentStroke.current] };
     }
 
-    setElements(prev => {
+    setElements((prev) => {
       const updated = [...prev, finalElement];
       socket.emit("whiteBoardData", { roomId, elements: updated });
       return updated;
@@ -153,6 +153,9 @@ const WhiteBoard = ({
       onMouseMove={draw}
       onMouseUp={stopDrawing}
       onMouseLeave={stopDrawing}
+      onTouchStart={startDrawing}
+      onTouchMove={draw}
+      onTouchEnd={stopDrawing}
     />
   );
 };
