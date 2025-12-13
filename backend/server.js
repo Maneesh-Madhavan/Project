@@ -1,44 +1,85 @@
 const express = require("express");
-const app = express();
-const server = require("http").createServer(app);
-const io = require("socket.io")(server, { cors: { origin: "*" } });
-const { userJoin, userLeave, getUsers } = require("./utils/users");
+const http = require("http");
+const { Server } = require("socket.io");
 
-// Store whiteboard elements per room
-let roomElements = {};
+const app = express();
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
+
+const roomUsers = {};   
+const roomBoards = {};  
+const roomChats = {};  
+
+
 
 io.on("connection", (socket) => {
-  console.log("User Connected:", socket.id);
+  console.log("Connected:", socket.id);
 
-  socket.on("userJoined", ({ name, roomId, host, presenter, userId }) => {
+  socket.on("userJoined", (user) => {
+    const { roomId } = user;
+    if (!roomId) return;
+
     socket.join(roomId);
 
-    // Add to memory
-    userJoin(socket.id, name, roomId, host, presenter);
+    if (!roomUsers[roomId]) roomUsers[roomId] = [];
 
-    // Send confirmation
-    socket.emit("userIsJoined", { success: true });
+    roomUsers[roomId] = roomUsers[roomId].filter(
+      (u) => u.socketId !== socket.id
+    );
 
-    // Send updated room users
-    io.to(roomId).emit("roomUsers", getUsers(roomId));
+    roomUsers[roomId].push({ ...user, socketId: socket.id });
 
-    // Send existing board for THIS room
-    if (!roomElements[roomId]) roomElements[roomId] = [];
-    socket.emit("whiteBoardDataResponse", { elements: roomElements[roomId] });
+    socket.emit("whiteBoardData", roomBoards[roomId] || []);
+
+    socket.emit("roomChatResponse", roomChats[roomId] || []);
+
+   
+    io.to(roomId).emit("roomUsers", roomUsers[roomId]);
+
+    console.log(`User joined room ${roomId} | Users: ${roomUsers[roomId].length}`);
   });
 
   socket.on("whiteBoardData", ({ roomId, elements }) => {
-    // Update room-specific elements
-    roomElements[roomId] = elements;
-    socket.broadcast.to(roomId).emit("whiteBoardDataResponse", { elements: elements });
+    if (!roomId) return;
+    roomBoards[roomId] = elements;
+    socket.to(roomId).emit("whiteBoardData", elements);
+  });
+
+  socket.on("roomChatMessage", ({ roomId, msg }) => {
+    if (!roomId) return;
+
+    if (!roomChats[roomId]) roomChats[roomId] = [];
+    roomChats[roomId].push(msg);
+
+    io.to(roomId).emit("roomChatResponse", roomChats[roomId]);
   });
 
   socket.on("disconnect", () => {
-    const user = userLeave(socket.id);
-    if (user) io.to(user.room).emit("roomUsers", getUsers(user.room));
-    console.log("User Disconnected:", socket.id);
+    for (const roomId in roomUsers) {
+      const before = roomUsers[roomId].length;
+
+      roomUsers[roomId] = roomUsers[roomId].filter(
+        (u) => u.socketId !== socket.id
+      );
+
+      if (roomUsers[roomId].length !== before) {
+        io.to(roomId).emit("roomUsers", roomUsers[roomId]);
+        console.log(
+          `User left room ${roomId} | Users: ${roomUsers[roomId].length}`
+        );
+      }
+    }
+
+    console.log("Disconnected:", socket.id);
   });
 });
 
-const port = 5000;
-server.listen(port, () => console.log("Server running on http://localhost:5000"));
+server.listen(5000, () => {
+  console.log("Server running on port 5000");
+});
