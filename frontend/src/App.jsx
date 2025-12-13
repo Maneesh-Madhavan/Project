@@ -16,19 +16,19 @@ const connectionOptions = {
 const socket = io(server, connectionOptions);
 
 const App = () => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    // Load user from localStorage on initial render
+    const saved = localStorage.getItem("skUser");
+    return saved ? JSON.parse(saved) : null;
+  });
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
     socket.on("userIsJoined", (data) => {
-      if (data.success) {
-        console.log("UserJoined");
-      } else {
-        console.log("UserJoined Error");
-      }
+      if (data.success) console.log("UserJoined");
+      else console.log("UserJoined Error");
     });
 
-    // Listen for updated room users
     socket.on("roomUsers", (usersList) => {
       setUsers(usersList);
     });
@@ -39,26 +39,15 @@ const App = () => {
     };
   }, []);
 
+  // Persist user to localStorage whenever it changes
+  useEffect(() => {
+    if (user) localStorage.setItem("skUser", JSON.stringify(user));
+    else localStorage.removeItem("skUser");
+  }, [user]);
+
   const uuid = () => {
-    var S4 = () => {
-      return (((1 + Math.random()) * 0x10000) | 0)
-        .toString(16)
-        .substring(1);
-    };
-    return (
-      S4() +
-      S4() +
-      "-" +
-      S4() +
-      "-" +
-      S4() +
-      "-" +
-      S4() +
-      "-" +
-      S4() +
-      S4() +
-      S4()
-    );
+    var S4 = () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
+    return S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() + S4() + S4();
   };
 
   return (
@@ -68,12 +57,9 @@ const App = () => {
           path="/"
           element={<Forms uuid={uuid} socket={socket} setUser={setUser} />}
         />
-
         <Route
           path="/:roomId"
-          element={
-            <RoomPage user={user} socket={socket} users={users} />
-          }
+          element={<RoomPage user={user} socket={socket} users={users} />}
         />
       </Routes>
     </div>

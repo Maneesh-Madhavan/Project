@@ -1,27 +1,42 @@
 import { useRef, useState, useEffect } from "react";
 import WhiteBoard from "../../components/WhiteBoard";
+import { useNavigate } from "react-router-dom";
 import "./index.css";
 
 const RoomPage = ({ user, socket, users }) => {
   const canvasRef = useRef(null);
   const ctxRef = useRef(null);
+  const navigate = useNavigate();
 
   const [tool, setTool] = useState("pencil");
   const [color, setColor] = useState("#000000");
   const [elements, setElements] = useState([]);
   const [history, setHistory] = useState([]);
 
+  // Redirect to home if no user
+  useEffect(() => {
+    if (!user) {
+      navigate("/"); // send back to landing page
+      return;
+    }
+
+    if (user.roomId) {
+      socket.emit("userJoined", user); // rejoin room
+    }
+  }, [user, socket, navigate]);
+
   // Undo / Redo
   const undo = () => {
-    if (!elements.length) return;
+    if (!elements.length || !user) return;
     const last = elements[elements.length - 1];
     setHistory((h) => [...h, last]);
-    setElements((e) => e.slice(0, -1));
-    socket.emit("whiteBoardData", { roomId: user.roomId, elements: elements.slice(0, -1) });
+    const updated = elements.slice(0, -1);
+    setElements(updated);
+    socket.emit("whiteBoardData", { roomId: user.roomId, elements: updated });
   };
 
   const redo = () => {
-    if (!history.length) return;
+    if (!history.length || !user) return;
     const last = history[history.length - 1];
     const updated = [...elements, last];
     setElements(updated);
@@ -30,17 +45,13 @@ const RoomPage = ({ user, socket, users }) => {
   };
 
   const clearCanvas = () => {
+    if (!user) return;
     setElements([]);
     setHistory([]);
     socket.emit("whiteBoardData", { roomId: user.roomId, elements: [] });
   };
 
-  // Handle page refresh: reload same room
-  useEffect(() => {
-    if (user && user.roomId) {
-      socket.emit("userJoined", user);
-    }
-  }, [user, socket]);
+  if (!user) return null; // Avoid rendering until user is available
 
   return (
     <div className="room-wrapper">
@@ -51,39 +62,37 @@ const RoomPage = ({ user, socket, users }) => {
         </span>
       </div>
 
-      {user && (
-        <div className="toolbar">
-          <div className="tool-section">
-            {["pencil", "line", "rect"].map((t) => (
-              <label key={t} className="tool-option">
-                <input
-                  type="radio"
-                  name="tool"
-                  value={t}
-                  checked={tool === t}
-                  onChange={(e) => setTool(e.target.value)}
-                />
-                <span>{t}</span>
-              </label>
-            ))}
-          </div>
-
-          <div className="color-picker">
-            <label>Color</label>
-            <input
-              type="color"
-              value={color}
-              onChange={(e) => setColor(e.target.value)}
-            />
-          </div>
-
-          <div className="action-buttons">
-            <button onClick={undo} className="sk-btn action-btn">Undo</button>
-            <button onClick={redo} className="sk-btn action-btn">Redo</button>
-            <button onClick={clearCanvas} className="sk-btn clear-btn">Clear</button>
-          </div>
+      <div className="toolbar">
+        <div className="tool-section">
+          {["pencil", "line", "rect"].map((t) => (
+            <label key={t} className="tool-option">
+              <input
+                type="radio"
+                name="tool"
+                value={t}
+                checked={tool === t}
+                onChange={(e) => setTool(e.target.value)}
+              />
+              <span>{t}</span>
+            </label>
+          ))}
         </div>
-      )}
+
+        <div className="color-picker">
+          <label>Color</label>
+          <input
+            type="color"
+            value={color}
+            onChange={(e) => setColor(e.target.value)}
+          />
+        </div>
+
+        <div className="action-buttons">
+          <button onClick={undo} className="sk-btn action-btn">Undo</button>
+          <button onClick={redo} className="sk-btn action-btn">Redo</button>
+          <button onClick={clearCanvas} className="sk-btn clear-btn">Clear</button>
+        </div>
+      </div>
 
       <div className="canvas-container">
         <WhiteBoard
@@ -95,7 +104,7 @@ const RoomPage = ({ user, socket, users }) => {
           color={color}
           socket={socket}
           user={user}
-          roomId={user?.roomId}
+          roomId={user.roomId}
         />
       </div>
     </div>
