@@ -1,5 +1,5 @@
-import CreateRoomForm from "./CreateRoomForm"
-import JoinRoomForm from "./JoinRoomForm"
+import CreateRoomForm from "./CreateRoomForm/index.jsx"
+import JoinRoomForm from "./JoinRoomForm/index.jsx"
 import "./index.css"
 
 const Forms = ({uuid, socket, setUser}) => {
