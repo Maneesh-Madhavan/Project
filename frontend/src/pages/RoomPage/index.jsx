@@ -13,19 +13,11 @@ const RoomPage = ({ user, socket, users }) => {
   const [elements, setElements] = useState([]);
   const [history, setHistory] = useState([]);
 
-  // Redirect to home if no user
   useEffect(() => {
-    if (!user) {
-      navigate("/"); // send back to landing page
-      return;
-    }
-
-    if (user.roomId) {
-      socket.emit("userJoined", user); // rejoin room
-    }
+    if (!user) navigate("/");
+    else if (user.roomId) socket.emit("userJoined", user);
   }, [user, socket, navigate]);
 
-  // Undo / Redo
   const undo = () => {
     if (!elements.length || !user) return;
     const last = elements[elements.length - 1];
@@ -51,15 +43,13 @@ const RoomPage = ({ user, socket, users }) => {
     socket.emit("whiteBoardData", { roomId: user.roomId, elements: [] });
   };
 
-  if (!user) return null; // Avoid rendering until user is available
+  if (!user) return null;
 
   return (
     <div className="room-wrapper">
       <div className="room-header">
         <h1 className="logo">SketchMate</h1>
-        <span className="users-online">
-          Users Online: {users?.length || 0}
-        </span>
+        <span className="users-online">Users Online: {users?.length || 0}</span>
       </div>
 
       <div className="toolbar">
@@ -80,11 +70,7 @@ const RoomPage = ({ user, socket, users }) => {
 
         <div className="color-picker">
           <label>Color</label>
-          <input
-            type="color"
-            value={color}
-            onChange={(e) => setColor(e.target.value)}
-          />
+          <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
         </div>
 
         <div className="action-buttons">
