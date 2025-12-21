@@ -51,6 +51,20 @@ const RoomPage = ({ socket, user, users }) => {
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
+ // Scroll chat input into view when typing
+useEffect(() => {
+  const handleFocus = () => {
+    const chatInput = document.querySelector('.chat-input');
+    if (chatInput) chatInput.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const inputEl = document.querySelector('.chat-input input');
+  if (inputEl) inputEl.addEventListener('focus', handleFocus);
+
+  return () => {
+    if (inputEl) inputEl.removeEventListener('focus', handleFocus);
+  };
+}, [chatOpen]);
 
   const redo = () => {
     if (!history.length) return;
