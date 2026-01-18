@@ -14,21 +14,18 @@ const RoomPage = ({ socket, user, users }) => {
   const [elements, setElements] = useState([]);
   const [history, setHistory] = useState([]);
 
-  /*CHAT STATE*/
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMsg, setChatMsg] = useState("");
   const [messages, setMessages] = useState([]);
 
-  /*SAFETY*/
+  /* SAFETY */
   useEffect(() => {
-    if (!user || !user.roomId) {
+    if (!user?.roomId) {
       navigate("/");
-      return;
     }
-    socket.emit("userJoined", user);
-  }, [user, socket, navigate]);
+  }, [user, navigate]);
 
-  /*SOCKET LISTENERS*/
+  /* SOCKET LISTENERS */
   useEffect(() => {
     socket.on("whiteBoardData", (data) => setElements(data));
     socket.on("roomChatResponse", (msgs) => setMessages(msgs));
@@ -39,32 +36,19 @@ const RoomPage = ({ socket, user, users }) => {
     };
   }, [socket]);
 
-  /*WHITEBOARD ACTIONS*/
+  /* JOIN ROOM — ONLY HERE */
+  useEffect(() => {
+    if (!user?.roomId) return;
+    socket.emit("userJoined", user);
+  }, [user, socket]);
+
+  /* WHITEBOARD ACTIONS */
   const undo = () => {
     if (!elements.length) return;
     const updated = elements.slice(0, -1);
     setElements(updated);
     socket.emit("whiteBoardData", { roomId: user.roomId, elements: updated });
   };
-  function capitalizeFirst(t) {
-  if (!t) return "";
-  return t.charAt(0).toUpperCase() + t.slice(1);
-}
-
- // Scroll chat input into view when typing
-useEffect(() => {
-  const handleFocus = () => {
-    const chatInput = document.querySelector('.chat-input');
-    if (chatInput) chatInput.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const inputEl = document.querySelector('.chat-input input');
-  if (inputEl) inputEl.addEventListener('focus', handleFocus);
-
-  return () => {
-    if (inputEl) inputEl.removeEventListener('focus', handleFocus);
-  };
-}, [chatOpen]);
 
   const redo = () => {
     if (!history.length) return;
@@ -80,15 +64,15 @@ useEffect(() => {
     setHistory([]);
     socket.emit("whiteBoardData", { roomId: user.roomId, elements: [] });
   };
-  
-  /*CHAT*/
+
+  /* CHAT */
   const sendMessage = () => {
     if (!chatMsg.trim()) return;
 
     socket.emit("roomChatMessage", {
       roomId: user.roomId,
       msg: {
-        user: user.name,  
+        user: user.name,
         text: chatMsg,
         time: Date.now(),
       },
@@ -108,7 +92,7 @@ useEffect(() => {
         </span>
       </div>
 
-      {/*TOOLBAR*/}
+      {/* TOOLBAR */}
       <div className="toolbar">
         <div className="tool-section">
           {["pencil", "line", "rect"].map((t) => (
@@ -118,7 +102,7 @@ useEffect(() => {
                 checked={tool === t}
                 onChange={() => setTool(t)}
               />
-              {capitalizeFirst(t)}
+              {t.charAt(0).toUpperCase() + t.slice(1)}
             </label>
           ))}
           <input
@@ -155,12 +139,14 @@ useEffect(() => {
         />
       </div>
 
-      {/*CHAT PANEL*/}
+      {/* CHAT PANEL */}
       {chatOpen && (
         <div className="chat-panel">
           <div className="chat-header">
             <span>Room Chat</span>
-            <button className="buttonUI"  onClick={() => setChatOpen(false)}><span className="xcolor">X</span></button>
+            <button className="buttonUI" onClick={() => setChatOpen(false)}>
+              <span className="xcolor">X</span>
+            </button>
           </div>
 
           <div className="chat-body">
@@ -185,7 +171,9 @@ useEffect(() => {
               onKeyDown={(e) => e.key === "Enter" && sendMessage()}
               placeholder="Type message..."
             />
-            <button onClick={sendMessage} className="sk-btn action-btn">Send</button>
+            <button onClick={sendMessage} className="sk-btn action-btn">
+              Send
+            </button>
           </div>
         </div>
       )}

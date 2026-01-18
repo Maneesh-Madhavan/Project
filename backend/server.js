@@ -7,28 +7,30 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
-// Serve the Vite frontend build
-app.use(express.static(path.join(__dirname, "../frontend/dist")));
+// Serve frontend
+const distPath = path.join(__dirname, "../frontend/dist");
+app.use(express.static(distPath));
 
-// SOCKET.IO setup
+// Socket.io
 const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] },
 });
 
-// Store users, boards, and chats per room
 const roomUsers = {};
 const roomBoards = {};
 const roomChats = {};
 
 io.on("connection", (socket) => {
   socket.on("userJoined", (user) => {
-    if (!user.roomId) return;
+    if (!user?.roomId) return;
     const roomId = user.roomId;
 
     socket.join(roomId);
 
     if (!roomUsers[roomId]) roomUsers[roomId] = [];
-    roomUsers[roomId] = roomUsers[roomId].filter(u => u.socketId !== socket.id);
+    roomUsers[roomId] = roomUsers[roomId].filter(
+      (u) => u.socketId !== socket.id
+    );
     roomUsers[roomId].push({ ...user, socketId: socket.id });
 
     socket.emit("whiteBoardData", roomBoards[roomId] || []);
@@ -52,7 +54,9 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     for (const roomId in roomUsers) {
       const before = roomUsers[roomId].length;
-      roomUsers[roomId] = roomUsers[roomId].filter(u => u.socketId !== socket.id);
+      roomUsers[roomId] = roomUsers[roomId].filter(
+        (u) => u.socketId !== socket.id
+      );
       if (roomUsers[roomId].length !== before) {
         io.to(roomId).emit("roomUsers", roomUsers[roomId]);
       }
@@ -60,12 +64,10 @@ io.on("connection", (socket) => {
   });
 });
 
-// SPA fallback for React/Vite routing
 app.get(/.*/, (req, res) => {
-  res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
+  res.sendFile(path.join(distPath, "index.html"));
 });
 
-// Start server
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

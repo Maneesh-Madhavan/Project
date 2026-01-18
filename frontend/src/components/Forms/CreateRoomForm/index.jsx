@@ -1,13 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const CreateRoomForm = ({ uuid, socket, setUser }) => {
+const CreateRoomForm = ({ uuid, setUser }) => {
   const [roomId, setRoomId] = useState(uuid());
   const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleCreateRoom = (e) => {
     e.preventDefault();
+    if (!name.trim()) return;
+
+    setLoading(true); // ✅ START SPINNER
 
     const roomData = {
       name,
@@ -16,18 +20,23 @@ const CreateRoomForm = ({ uuid, socket, setUser }) => {
       host: true,
       presenter: true,
     };
+
     setUser(roomData);
-    navigate(`/${roomId}`);
-    socket.emit("userJoined", roomData);
+
+    setTimeout(() => {
+      navigate(`/${roomId}`);
+    }, 300);
   };
+
   return (
-    <form className="sk-form">
+    <form className="sk-form" onSubmit={handleCreateRoom}>
       <input
         type="text"
         className="sk-input"
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Enter your name"
+        disabled={loading}
       />
 
       <div className="sk-row">
@@ -36,27 +45,28 @@ const CreateRoomForm = ({ uuid, socket, setUser }) => {
           disabled
           value={roomId}
           className="sk-input flex-grow-1"
-          placeholder="Generate room code"
         />
 
         <button
           type="button"
           className="sk-btn sk-btn-green"
           onClick={() => setRoomId(uuid())}
+          disabled={loading}
         >
           Generate
         </button>
-        <button type="button" className="sk-btn sk-btn-red">
+
+        <button type="button" className="sk-btn sk-btn-red" disabled={loading}>
           Copy
         </button>
       </div>
 
       <button
         type="submit"
-        onClick={handleCreateRoom}
         className="sk-btn sk-btn-red sk-full-btn"
+        disabled={loading}
       >
-        Generate Room
+        {loading ? "Creating..." : "Generate Room"}
       </button>
     </form>
   );

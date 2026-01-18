@@ -1,6 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 
-const WhiteBoard = ({ canvasRef, ctxRef, elements, setElements, tool, color, user, socket, roomId }) => {
+const WhiteBoard = ({
+  canvasRef,
+  ctxRef,
+  elements,
+  setElements,
+  tool,
+  color,
+  user,
+  socket,
+  roomId,
+}) => {
   const isDrawing = useRef(false);
   const currentStroke = useRef([]);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
@@ -8,6 +18,7 @@ const WhiteBoard = ({ canvasRef, ctxRef, elements, setElements, tool, color, use
   const normalizePoint = (x, y) => [x / canvasSize.width, y / canvasSize.height];
   const denormalizePoint = (nx, ny) => [nx * canvasSize.width, ny * canvasSize.height];
 
+  /* RESIZE */
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -18,7 +29,6 @@ const WhiteBoard = ({ canvasRef, ctxRef, elements, setElements, tool, color, use
       const height = parent.clientHeight;
 
       setCanvasSize({ width, height });
-
       canvas.width = width;
       canvas.height = height;
 
@@ -41,6 +51,7 @@ const WhiteBoard = ({ canvasRef, ctxRef, elements, setElements, tool, color, use
     };
   }, [elements]);
 
+  /* SOCKET LISTENERS */
   useEffect(() => {
     socket.on("whiteBoardDataResponse", ({ elements }) => setElements(elements));
     return () => socket.off("whiteBoardDataResponse");
@@ -62,8 +73,8 @@ const WhiteBoard = ({ canvasRef, ctxRef, elements, setElements, tool, color, use
 
       if (el.type === "pencil") {
         ctx.beginPath();
-        const start = denormalizePoint(el.points[0].x, el.points[0].y);
-        ctx.moveTo(start[0], start[1]);
+        const [sx, sy] = denormalizePoint(el.points[0].x, el.points[0].y);
+        ctx.moveTo(sx, sy);
         el.points.forEach((p) => {
           const [x, y] = denormalizePoint(p.x, p.y);
           ctx.lineTo(x, y);
@@ -104,7 +115,8 @@ const WhiteBoard = ({ canvasRef, ctxRef, elements, setElements, tool, color, use
   const startDrawing = (e) => {
     isDrawing.current = true;
     const { x, y } = getCoords(e);
-    currentStroke.current = tool === "pencil" ? [{ x, y }] : [[x, y], [x, y]];
+    currentStroke.current =
+      tool === "pencil" ? [{ x, y }] : [[x, y], [x, y]];
   };
 
   const draw = (e) => {
@@ -121,7 +133,6 @@ const WhiteBoard = ({ canvasRef, ctxRef, elements, setElements, tool, color, use
     }
 
     redraw(temp);
-
     socket.emit("whiteBoardTemp", { roomId, userId: user.userId, element: temp });
   };
 
@@ -129,9 +140,10 @@ const WhiteBoard = ({ canvasRef, ctxRef, elements, setElements, tool, color, use
     if (!isDrawing.current) return;
     isDrawing.current = false;
 
-    const finalElement = tool === "pencil"
-      ? { type: "pencil", color, points: currentStroke.current }
-      : { type: tool, color, path: [...currentStroke.current] };
+    const finalElement =
+      tool === "pencil"
+        ? { type: "pencil", color, points: currentStroke.current }
+        : { type: tool, color, path: [...currentStroke.current] };
 
     setElements((prev) => {
       const updated = [...prev, finalElement];
@@ -146,7 +158,19 @@ const WhiteBoard = ({ canvasRef, ctxRef, elements, setElements, tool, color, use
     <canvas
       ref={canvasRef}
       className="wb-canvas"
-      style={{ width: "100%", height: "100%", display: "block" }}
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "block",
+        cursor:
+          tool === "pencil"
+            ? "url('/pencil.cur'), crosshair"
+            : tool === "line"
+            ? "crosshair"
+            : tool === "rect"
+            ? "crosshair"
+            : "default",
+      }}
       onMouseDown={startDrawing}
       onMouseMove={draw}
       onMouseUp={stopDrawing}

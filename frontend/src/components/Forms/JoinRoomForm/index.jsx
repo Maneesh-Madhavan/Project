@@ -1,13 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const JoinRoomForm = ({ uuid, socket, setUser }) => {
+const JoinRoomForm = ({ uuid, setUser }) => {
   const [roomId, setRoomId] = useState("");
   const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleRoomJoin = (e) => {
     e.preventDefault();
+    if (!name.trim() || !roomId.trim()) return;
+
+    setLoading(true); 
 
     const roomData = {
       name,
@@ -16,19 +20,24 @@ const JoinRoomForm = ({ uuid, socket, setUser }) => {
       host: false,
       presenter: false,
     };
+
     setUser(roomData);
-    navigate(`/${roomId}`);
-    socket.emit("userJoined", roomData);
+
+    // small delay to let UI update (optional but smooth)
+    setTimeout(() => {
+      navigate(`/${roomId}`);
+    }, 300);
   };
 
   return (
-    <form className="sk-form">
+    <form className="sk-form" onSubmit={handleRoomJoin}>
       <input
         type="text"
         className="sk-input"
         placeholder="Enter your name"
         value={name}
         onChange={(e) => setName(e.target.value)}
+        disabled={loading}
       />
 
       <input
@@ -37,14 +46,15 @@ const JoinRoomForm = ({ uuid, socket, setUser }) => {
         placeholder="Enter room code"
         value={roomId}
         onChange={(e) => setRoomId(e.target.value)}
+        disabled={loading}
       />
 
       <button
         type="submit"
-        onClick={handleRoomJoin}
         className="sk-btn sk-btn-red sk-full-btn"
+        disabled={loading}
       >
-        Join Room
+        {loading ? "Joining..." : "Join Room"}
       </button>
     </form>
   );
