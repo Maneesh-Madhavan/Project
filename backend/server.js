@@ -1,6 +1,7 @@
 const express = require("express");
 const http = require("http");
 const path = require("path");
+const fs = require("fs");
 const { Server } = require("socket.io");
 
 const app = express();
@@ -64,13 +65,17 @@ io.on("connection", (socket) => {
   });
 });
 
-app.get(/^\/.*$/, (req, res) => {
-  res.sendFile(path.join(distPath, "index.html"));
+// SPA fallback — serve index.html for any route that isn't a static file
+app.use((req, res, next) => {
+  const indexPath = path.join(distPath, "index.html");
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    next();
+  }
 });
-
-
-
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+

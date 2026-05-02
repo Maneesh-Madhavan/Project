@@ -10,7 +10,7 @@ const RoomPage = ({ socket, user, users }) => {
   const ctxRef = useRef(null);
 
   const [tool, setTool] = useState("pencil");
-  const [color, setColor] = useState("#000000");
+  const [color, setColor] = useState("#06b6d4");
   const [elements, setElements] = useState([]);
   const [history, setHistory] = useState([]);
 
@@ -145,13 +145,16 @@ const RoomPage = ({ socket, user, users }) => {
           <div className="chat-header">
             <span>Room Chat</span>
             <button className="buttonUI" onClick={() => setChatOpen(false)}>
-              <span className="xcolor">X</span>
+              <span className="xcolor">✕</span>
             </button>
           </div>
 
           <div className="chat-body">
             {messages.map((m, i) => (
-              <div key={i} className="chat-msg">
+              <div
+                key={i}
+                className={`chat-msg ${m.user === user.name ? "my-msg" : ""}`}
+              >
                 <div className="chat-username">{m.user}</div>
                 <div className="chat-text">{m.text}</div>
                 <div className="chat-time">
@@ -171,8 +174,8 @@ const RoomPage = ({ socket, user, users }) => {
               onKeyDown={(e) => e.key === "Enter" && sendMessage()}
               placeholder="Type message..."
             />
-            <button onClick={sendMessage} className="sk-btn action-btn">
-              Send
+            <button onClick={sendMessage} className="chat-send-btn">
+              ➤
             </button>
           </div>
         </div>

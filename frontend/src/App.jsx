@@ -22,8 +22,15 @@ const App = () => {
     return saved ? JSON.parse(saved) : null;
   });
   const [users, setUsers] = useState([]);
+  const [isConnected, setIsConnected] = useState(socket.connected);
 
   useEffect(() => {
+    const onConnect = () => setIsConnected(true);
+    const onDisconnect = () => setIsConnected(false);
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+
     socket.on("userIsJoined", (data) => {
       if (data.success) console.log("UserJoined");
       else console.log("UserJoined Error");
@@ -34,6 +41,8 @@ const App = () => {
     });
 
     return () => {
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
       socket.off("userIsJoined");
       socket.off("roomUsers");
     };
@@ -51,18 +60,26 @@ const App = () => {
   };
 
   return (
-    <div>
-      <Routes>
-        <Route
-          path="/"
-          element={<Forms uuid={uuid} socket={socket} setUser={setUser} />}
-        />
-        <Route
-          path="/:roomId"
-          element={<RoomPage user={user} socket={socket} users={users} />}
-        />
-      </Routes>
-    </div>
+    <>
+      {!isConnected && (
+        <div className="loading-overlay">
+          <div className="loader-orb"></div>
+          <div className="loading-text">Waking up SketchMate Servers...</div>
+        </div>
+      )}
+      <div>
+        <Routes>
+          <Route
+            path="/"
+            element={<Forms uuid={uuid} socket={socket} setUser={setUser} />}
+          />
+          <Route
+            path="/:roomId"
+            element={<RoomPage user={user} socket={socket} users={users} />}
+          />
+        </Routes>
+      </div>
+    </>
   );
 };
 

@@ -5,13 +5,14 @@ const CreateRoomForm = ({ uuid, setUser }) => {
   const [roomId, setRoomId] = useState(uuid());
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
 
   const handleCreateRoom = (e) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    setLoading(true); // ✅ START SPINNER
+    setLoading(true);
 
     const roomData = {
       name,
@@ -26,6 +27,12 @@ const CreateRoomForm = ({ uuid, setUser }) => {
     setTimeout(() => {
       navigate(`/${roomId}`);
     }, 300);
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(roomId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -44,7 +51,7 @@ const CreateRoomForm = ({ uuid, setUser }) => {
           type="text"
           disabled
           value={roomId}
-          className="sk-input flex-grow-1"
+          className="sk-input"
         />
 
         <button
@@ -53,11 +60,16 @@ const CreateRoomForm = ({ uuid, setUser }) => {
           onClick={() => setRoomId(uuid())}
           disabled={loading}
         >
-          Generate
+          New
         </button>
 
-        <button type="button" className="sk-btn sk-btn-red" disabled={loading}>
-          Copy
+        <button
+          type="button"
+          className="sk-btn sk-btn-red"
+          onClick={handleCopy}
+          disabled={loading}
+        >
+          {copied ? "Copied!" : "Copy"}
         </button>
       </div>
 
@@ -66,7 +78,7 @@ const CreateRoomForm = ({ uuid, setUser }) => {
         className="sk-btn sk-btn-red sk-full-btn"
         disabled={loading}
       >
-        {loading ? "Creating..." : "Generate Room"}
+        {loading ? "Creating..." : "Create Room"}
       </button>
     </form>
   );
