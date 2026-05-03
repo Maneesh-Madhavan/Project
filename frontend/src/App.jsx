@@ -11,13 +11,13 @@ import { useEffect, useState } from "react";
 const server =
   import.meta.env.DEV
     ? "http://localhost:5000"
-    : window.location.origin;
+    : "https://sketchmate-backend.onrender.com";
 
 const connectionOptions = {
   "force new connection": true,
   reconnectionAttempts: "Infinity",
   timeout: 10000,
-  transports: ["websocket"],
+  // Removed strict websocket transport to allow polling fallback on Render
 };
 
 const socket = io(server, connectionOptions);
