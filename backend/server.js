@@ -30,7 +30,7 @@ io.on("connection", (socket) => {
 
     if (!roomUsers[roomId]) roomUsers[roomId] = [];
     roomUsers[roomId] = roomUsers[roomId].filter(
-      (u) => u.socketId !== socket.id
+      (u) => u.userId !== user.userId
     );
     roomUsers[roomId].push({ ...user, socketId: socket.id });
 

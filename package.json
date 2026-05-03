@@ -1,0 +1,13 @@
+{
+  "name": "sketchmate",
+  "version": "1.0.0",
+  "description": "SketchMate - Real-time collaborative whiteboard",
+  "scripts": {
+    "dev:backend": "cd backend && node server.js",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "start": "cd backend && node server.js",
+    "preview:prod": "npm run build && npm run start"
+  },
+  "author": "SketchMate"
+}

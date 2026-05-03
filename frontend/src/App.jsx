@@ -1,11 +1,18 @@
 import Forms from "./components/Forms";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useNavigate } from "react-router-dom";
 import "./App.css";
 import RoomPage from "./pages/RoomPage";
 import io from "socket.io-client";
 import { useEffect, useState } from "react";
 
-const server = "https://sketchmate-backend.onrender.com";
+// Auto-detect: in dev Vite sets import.meta.env.DEV = true
+// In production the frontend is served by the same Express server, so we
+// connect to the same origin (no hardcoded URL needed).
+const server =
+  import.meta.env.DEV
+    ? "http://localhost:5000"
+    : window.location.origin;
+
 const connectionOptions = {
   "force new connection": true,
   reconnectionAttempts: "Infinity",
@@ -17,7 +24,6 @@ const socket = io(server, connectionOptions);
 
 const App = () => {
   const [user, setUser] = useState(() => {
-    // Load user from localStorage on initial render
     const saved = localStorage.getItem("skUser");
     return saved ? JSON.parse(saved) : null;
   });
@@ -64,7 +70,8 @@ const App = () => {
       {!isConnected && (
         <div className="loading-overlay">
           <div className="loader-orb"></div>
-          <div className="loading-text">Waking up SketchMate Servers...</div>
+          <div className="loading-text">Waking up SketchMate…</div>
+          <div className="loading-sub">Connecting to server, please wait</div>
         </div>
       )}
       <div>
